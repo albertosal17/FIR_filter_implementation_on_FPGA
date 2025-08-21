@@ -90,7 +90,7 @@ architecture tb of i2s_loopback_filter_squarewave_tb is
     -- Square-wave params
     constant AMP_POS      : std_logic_vector(23 downto 0) := x"200000"; -- +amp (24-bit signed)
     constant AMP_NEG      : std_logic_vector(23 downto 0) := x"E00000"; -- -amp
-    constant HALF_PERIOD  : integer := 24;  
+    constant HALF_PERIOD  : integer := 24;  -- with mclk period 80 ns this leads to a approx 1 kHz squarewave (ws frequency is like 48 kHz if you do the math, so the period is 20 us. 24 clock then means 24*20 us = 480 us, for a total period of 480*2 = 960 us, which is around 1 kHz square wave)
     signal   sq_state     : std_logic := '0';
     signal   sq_count     : integer := 0;
 
@@ -99,7 +99,7 @@ architecture tb of i2s_loopback_filter_squarewave_tb is
   constant SLOT_BITS : integer := 32;  -- il tuo transceiver usa sclk_ws_ratio=64 => 32 bit per canale tipici I2S
   signal bit_idx  : integer := SLOT_BITS-1;
 
-  -- current words that are sampled (per comodità)
+  -- current words that are sampled (per comoditï¿½)
   signal curL, curR : std_logic_vector(D_WIDTH-1 downto 0) := (others=>'0');
 
   -- Segnale necessario per clock del FIR left (vedi sotto)
@@ -126,7 +126,7 @@ begin
   -- 2) Apertura file all'avvio (dopo il reset)
   open_file: process
   begin
-    file_open(fcsv, string'("C:/Users/ASUS/Desktop/TRIOSSI/final_project/i2s_pMod_HowToUse_2/fir_squarewave_sim_logs.csv"), write_mode);
+    file_open(fcsv, string'("C:/Users/ASUS/Desktop/TRIOSSI/final_project/i2s_pMod_HowToUse_2/log_simulations/fir_squarewave_sim_logs.csv"), write_mode);
     wait; -- resta aperto per tutta la sim
   end process;
   
@@ -209,9 +209,9 @@ begin
 
   -- =========================
   -- FIR Wiring (Left/Right)
-  -- Clocking: ogni FIR clockato una volta per campione del proprio canale (cioè con clock ws)
+  -- Clocking: ogni FIR clockato una volta per campione del proprio canale (cioï¿½ con clock ws)
   -- =========================
-  -- Troncamento 24->8 (perchè il filtro è costruito così, con 8 bit input)
+  -- Troncamento 24->8 (perchï¿½ il filtro ï¿½ costruito cosï¿½, con 8 bit input)
   l_in_8 <= to_s8(l_rx);
   r_in_8 <= to_s8(r_rx);
 
@@ -240,7 +240,7 @@ begin
     l_out_10_sc <= std_logic_vector( shift_right( signed(l_out_10), SHIFT) );
     r_out_10_sc <= std_logic_vector( shift_right( signed(r_out_10), SHIFT) );
     
-    -- Estensione 10->24. Questo segnale sarà poi trasmesso in output dal transreceiver, che lo trametterà serializzato
+    -- Estensione 10->24. Questo segnale sarï¿½ poi trasmesso in output dal transreceiver, che lo trametterï¿½ serializzato
     l_tx <= sxt10_to_24(l_out_10_sc);
     r_tx <= sxt10_to_24(r_out_10_sc);
 
@@ -252,7 +252,7 @@ begin
     variable in8_s   : integer;
     variable out10_s : integer;
   begin
-    if falling_edge(ws) then  -- inizio slot Left (equivalente al rising di not ws, ma più "pulito")
+    if falling_edge(ws) then  -- inizio slot Left (equivalente al rising di not ws, ma piï¿½ "pulito")
       -- scrivi header solo alla prima riga
       if sample_idx = 0 then
         L := null;
