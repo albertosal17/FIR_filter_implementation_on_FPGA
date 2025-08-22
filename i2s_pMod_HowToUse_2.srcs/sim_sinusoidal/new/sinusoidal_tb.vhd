@@ -1,4 +1,4 @@
--- In questa simulazione verifico il comportamento del nuovo filtro fir_filter_4_16bit
+-- In questa simulazione verifico il comportamento del nuovo filtro fir_filter_4_24bit
 -- Inserisco in input un segnale sinusoidale a 1 kHz, con rumore ad alta frequenza a 10 kHz e 15 kHz.
 -- Il filtro dovrebbe tagliare il rumore e mantenere la sinusoide.
 -- Nota: non serve in questa simulazione tutta la parte di gestione I2S, dato che il filtro è un componente standalone.
@@ -11,13 +11,13 @@ use ieee.math_real.all;         -- sin, math_pi, round
 use ieee.std_logic_textio.all;  -- to write std_logic_vector/signed
 use std.env.all; -- for stop()
 
-entity fir_filter_4_16bit_tb is
+entity fir_filter_4_24bit_tb is
 end;
 
-architecture tb of fir_filter_4_16bit_tb is
-  constant DATA_W  : integer := 16;
+architecture tb of fir_filter_4_24bit_tb is
+  constant DATA_W  : integer := 24;
   constant COEFF_W : integer := 12;
-  constant ACC_W   : integer := 32;
+  constant ACC_W   : integer := 41;
 
   signal clk   : std_logic := '0';
   signal rst   : std_logic := '1';
@@ -26,11 +26,11 @@ architecture tb of fir_filter_4_16bit_tb is
 
   -- parametri segnale
   constant FS       : real := 48820.0;     -- word select clock (~48.82 kHz: coerente con test precedente 'squarewave' in cui mlck period 80 us; inoltre è vicina a quella reale che usiamo, pari a 44.1 kHz)
-  constant F_TONE   : real := 1000.0;      -- 1 kHz, frequenza onda sinusoidale
+  constant F_TONE   : real := 500.0;      -- 1 kHz, frequenza onda sinusoidale
   constant F_NOISE1 : real := 10000.0;     -- 10 kHz (high frequency noise, to be cutted by the filter)
   constant F_NOISE2 : real := 15000.0;     -- 15 kHz (high frequency noise, to be cutted by the filter)
-  constant AMP_MAIN  : real := 0.75; -- la sinusoide principale sarà al 75% del massimo segnale rappresentabile (chiamato "full scale" o FS)
-  constant AMP_NOISE : real := 0.20; -- il rumore aggiunto sarà al 20% del massimo segnale rappresentabile
+  constant AMP_MAIN  : real := 0.13; -- la sinusoide principale sarà al 75% del massimo segnale rappresentabile (chiamato "full scale" o FS)
+  constant AMP_NOISE : real := 0.009; -- il rumore aggiunto sarà al 20% del massimo segnale rappresentabile
 
   constant N_SAMPLES : integer := 500;
 
@@ -43,7 +43,7 @@ architecture tb of fir_filter_4_16bit_tb is
   signal sample_idx : integer := 0;
 
   
-  function real_to_s16(x : real) return std_logic_vector is
+  function real_to_s24(x : real) return std_logic_vector is
     -- Funzione helper per convertire un numero reale in signed a 16 bit
     -- Serve per convertire il segnale sinusoidale in ingresso al filtro
     -- La conversione è fatta in modo da mantenere il range [-1.0, 0.99997], che è il range del segnale sinusoidale
@@ -52,8 +52,8 @@ architecture tb of fir_filter_4_16bit_tb is
     --   x: numero reale da convertire
 
     variable s : integer; -- result
-    variable lim : integer := 2**15 - 1; -- massimo valore rappresentabile in signed 16 bit
-    variable n  : integer := 2**15; -- (modulo del) minimo valore rappresentabile in signed 16 bit
+    variable lim : integer := 2**23 - 1; -- massimo valore rappresentabile in signed 16 bit
+    variable n  : integer := 2**23; -- (modulo del) minimo valore rappresentabile in signed 16 bit
   
     begin
     -- clamp in [-1.0, 0.99997]
@@ -68,17 +68,21 @@ architecture tb of fir_filter_4_16bit_tb is
 
     end if;
 
-    return std_logic_vector(to_signed(s, 16));
+    return std_logic_vector(to_signed(s, 24));
 
   end;
 
 
 
   -- DUT
-  component fir_filter_4_16bit
-    generic ( DATA_W: integer := 16; COEFF_W: integer := 12; ACC_W: integer := 32 );
+  component fir_filter_4_24bit
+    generic ( 
+      DATA_W: integer := 24; 
+      COEFF_W: integer := 12; 
+      ACC_W: integer := 40 );
     port(
-      clock: in std_logic; reset: in std_logic;
+      clock: in std_logic; 
+      reset: in std_logic;
       i_data: in std_logic_vector(DATA_W-1 downto 0);
       o_data: out std_logic_vector(DATA_W-1 downto 0)
     );
@@ -99,18 +103,27 @@ begin
   end process;
 
   -- istanzia FIR
-  dut: fir_filter_4_16bit
-    generic map (DATA_W=>DATA_W, COEFF_W=>COEFF_W, ACC_W=>ACC_W)
-    port map (clock=>clk, reset=>rst, i_data=>din, o_data=>dout);
+  dut: fir_filter_4_24bit
+    generic map (
+      DATA_W=>DATA_W, 
+      COEFF_W=>COEFF_W, 
+      ACC_W=>ACC_W
+      )
+    port map (
+      clock=>clk, 
+      reset=>rst, 
+      i_data=>din, 
+      o_data=>dout
+      );
 
   -- stimolo + logging
   process(clk)
     variable L : line; -- variabile per scrivere su file CSV
     variable t  : real;
     variable v  : real;
-    variable in16_i : integer; -- input value (int) for CSV  
-    variable in16_slv: std_logic_vector(15 downto 0); 
-    variable out16_i : integer;
+    variable in24_i : integer; -- input value (int) for CSV  
+    variable in24_slv: std_logic_vector(DATA_W-1 downto 0); 
+    variable out24_i : integer;
 
   -- Collego il filtro ai segnali di input/output
   begin
@@ -130,7 +143,7 @@ begin
         if sample_idx = 0 then
         -- Write header CSV
         L := null;
-        write(L, string'("sample,in_l_16,out_l_16"));
+        write(L, string'("sample,in_l_24,out_l_24"));
         writeline(fcsv, L);
         sample_idx <= sample_idx + 1;
 
@@ -146,10 +159,10 @@ begin
 
           -- Il segnale calcolato è in range [-1,0]: lo converto in signed 16 bit, che è la dimensione del segnale in ingresso al filtro,  
           -- e lo collego all'input del filtro
-          in16_slv := real_to_s16(v); 
-          din <= in16_slv;  -- prepare CSV numbers 
-          in16_i := to_integer(signed(in16_slv)); 
-          out16_i := to_integer(signed(dout)); -- note: 1+ cycle latency typical for FIR
+          in24_slv := real_to_s24(v); 
+          din <= in24_slv;  -- prepare CSV numbers 
+          in24_i := to_integer(signed(in24_slv)); 
+          out24_i := to_integer(signed(dout)); -- note: 1+ cycle latency typical for FIR
           
 
           -- Scrivo log input/output in una riga sul CSV 
@@ -158,10 +171,10 @@ begin
           write(L, sample_idx); -- sample_idx-1 perché il primo log è l'header
           write(L, string'(","));
 
-          write(L, in16_i);  
+          write(L, in24_i);  
           write(L, string'(","));
 
-          write(L, out16_i);
+          write(L, out24_i);
           writeline(fcsv, L);
 
           report "LOG TICK idx=" & integer'image(sample_idx) severity note;

@@ -29,17 +29,17 @@ def analyze_logged(data, fs):
 
     # load the names of the variables in the CSV file (from the header)
     fields = data.dtype.names 
-    if not {"sample", "in_l_16", "out_l_16"}.issubset(fields):
+    if not {"sample", "in_l_24", "out_l_24"}.issubset(fields):
         raise Exception("[WARN] CSV missing required columns; fields found:", fields)
 
 
-    in_l  = data["in_l_16"].astype(float) # Left input signal (8-bit)
-    out_l = data["out_l_16"].astype(float) # Left output signal (10-bit)
+    in_l  = data["in_l_24"].astype(float) # Left input signal (8-bit)
+    out_l = data["out_l_24"].astype(float) # Left output signal (10-bit)
 
 
     # Plot the input and output signals in time domain
-    plot_time(in_l, "Left input (16-bit)", filename="input_signal.svg", signal_type=signal_type) 
-    plot_time(out_l, "Left output (16-bit)", filename="output_signal.svg", signal_type=signal_type)
+    plot_time(in_l, "Left input (24-bit)", filename="input_signal.svg", signal_type=signal_type) 
+    plot_time(out_l, "Left output (24-bit)", filename="output_signal.svg", signal_type=signal_type)
     plot_freqz(COEFF, fs, filename="fir_freq_response.svg", signal_type=signal_type)
 
 
@@ -67,25 +67,6 @@ def analyze_logged(data, fs):
     plt.show()
 
 
-def demo_square(coeff, fs):
-
-    # Generate square wave signal
-    f0 = 1000.0 # Frequency of the square wave in Hz 
-    
-    N = 5000 # Number of samples to generate
-    t = np.arange(N)/fs # corresponding time vector
-
-    sq = np.sign(np.sin(2*np.pi*f0*t)) # square wave    
-    sq8 = (127*sq).astype(float) # 8-bit representation (scaled to [-127, 127])
-    
-    # Apply the FIR filter to the square wave signal
-    y = np.convolve(sq8, coeff, mode='full')[:N]
-
-    # Plot the input and output signals in time domain
-    plot_time(sq8, "DEMO input: 1 kHz square (8-bit)", signal_type)
-    plot_time(y,    "DEMO output: filtered [1,2,2,1]", signal_type)
-    # Plot the frequency response of the FIR filter
-    plot_freqz(coeff, fs, signal_type)
 
 
 
@@ -95,9 +76,8 @@ data = load_csv(CSV_PATH)
 # If the CSV file was loaded successfully, analyze the logged data
 # Otherwise, run the demo with synthetic square wave
 if data is not None:
-    input_vs_output_time(data["in_l_16"], data["out_l_16"], signal_type)
+    input_vs_output_time(data["in_l_24"], data["out_l_24"], signal_type)
     analyze_logged(data, WS_frequency)
     
 else:
-    print("[INFO] Running demo with synthetic square wave...")
-    demo_square(COEFF, WS_frequency)
+    print("ERROR: None data were provided!")

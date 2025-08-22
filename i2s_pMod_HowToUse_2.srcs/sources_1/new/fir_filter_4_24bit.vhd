@@ -1,12 +1,19 @@
+-- THIS FILE CONTAINS THE IMPLEMENTATION OF THE FIR FILTER BASED ON fir_filter_4.vhd WITH
+-- THE EXTENSION OG DATA WITDTH TO 24 BIT FOR IMPLEMENTATION PURPOSES (THE PMOD READS 24 BIT DATA)
+-- OTHER MINOR MODIFICATIONS TO THE ARCHITECTURE HAVE BEEN MADE, IN PARTICULAR: 
+-- NO DYNAMIC COEFFICIENTS BUT A FIXEDLOW-PASS FILTER
+-- NORMAZILED GUADAGNO: OUTPUT SIGNAL HAS SAME MAGNITUDE OF THE INPUT ONE
+-- SATURATION STRATEGY FOR SIGNALS WHO UNDER/OVER-FIT
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity fir_filter_4_16bit is
+entity fir_filter_4_24bit is
   generic (
-    DATA_W   : integer := 16;                  -- ampiezza (in bit) dei dati in ingresso e uscita
+    DATA_W   : integer := 24;                  -- ampiezza (in bit) dei dati in ingresso e uscita
     COEFF_W  : integer := 12;                  -- ampiezza (in bit) dei coefficienti
-    ACC_W    : integer := 32                   -- ampiezza accumulatore
+    ACC_W    : integer := 41                   -- ampiezza accumulatore (24+12+2 (somma 4 tap) + 3 guard bits)
   );
   port (
     clock       : in  std_logic; -- clock
@@ -16,13 +23,26 @@ entity fir_filter_4_16bit is
   );
 end entity;
 
-architecture rtl of fir_filter_4_16bit is
+architecture rtl of fir_filter_4_24bit is
   -- Coefficienti interi [1,2,2,1] per filtro passa-basso
   -- In questo caso li tengo costanti, e non dinamici come in fir_filter_4.vhd
-  constant C0 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
-  constant C1 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
-  constant C2 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
-  constant C3 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
+  ------------
+  -- USA QUESTI NEL CASO DI GUADAGNO NON UNITARIO (guadagno=6: 1+2+2+1)
+  --constant C0 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
+  --constant C1 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
+  --constant C2 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
+  --constant C3 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
+  ------------
+  -- USA QUESTI NEL CASO DI GUADAGNO UNITARIO (guadagno=1: 1/6)
+  -- rappresentazione Q0.12 per i numeri decimali, con 12 bit di parte frazionaria
+  -- Nota: poi, dopo l’accumulo, bisogna fare uno shift right di 12 bit (cioè dividere per 2^12) per riportare i risultati alla scala corretta.
+  constant FRAC : integer := 12;
+  constant C0 : signed(COEFF_W-1 downto 0) := to_signed( 683, COEFF_W);  -- 1/6 (1/6=0.16 -> 0.16* 2^12 = 0.16 * 4096 ≈ 683)
+  constant C1 : signed(COEFF_W-1 downto 0) :=  to_signed(1365, COEFF_W);  -- 2/6
+  constant C2 : signed(COEFF_W-1 downto 0) := C1;
+  constant C3 : signed(COEFF_W-1 downto 0) := C0;
+  ------------
+
 
   signal x0, x1, x2, x3 : signed(DATA_W-1 downto 0); -- shift register per i 4 campioni del segnale in ingresso
   signal xin            : signed(DATA_W-1 downto 0); -- segnale in ingresso (convertito in signed)
@@ -30,6 +50,7 @@ architecture rtl of fir_filter_4_16bit is
   -- prodotti e somma su ampiezza estesa
   signal p0, p1, p2, p3 : signed((DATA_W + COEFF_W)- 1 downto 0); -- prodotti tra segnale e coefficienti. Memo: when you multiply two numbers of N-bit and M-bit the output of the multiplication result is (N+M)-bits.
   signal acc            : signed(ACC_W-1 downto 0); -- accumulatore per i prodotti, con ampiezza estesa
+  signal acc_scaled : signed(ACC_W-1 downto 0); -- accumulatore con ampiezza estesa, ma con i bit frazionari rimossi (shift right di FRAC bit)
 
   -- uscita estesa (senza normalizzazione: guadagno max = somma coeff = 6)
   signal y_ext          : signed(ACC_W-1 downto 0);
@@ -93,12 +114,15 @@ begin
         -- accumulo: sommo i prodotti
         -- resize per evitare overflow, e somma con saturazione
         acc <= resize(p0, ACC_W) + resize(p1, ACC_W) + resize(p2, ACC_W) + resize(p3, ACC_W);
+
+        acc_scaled <= shift_right(acc, FRAC); -- rimuove i bit frazionari
+        -- ATTENZIONE: usa solo nel caso in cui usi guadagno unitario (guadagno=1: 1/6), altrimenti non serve
+
       end if;
     end if;
   end process;
 
-  -- nessuna normalizzazione: lasciamo guadagno=6 e saturiamo
-  y_ext <= acc;
+  -- saturiamo e convertiamo l'uscita in signed 16 bit
+  o_data <= std_logic_vector(saturation_signed(acc_scaled));
 
-  o_data <= std_logic_vector( saturation_signed(y_ext) );
 end architecture;

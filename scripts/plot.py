@@ -55,7 +55,7 @@ def input_vs_output_time(in_signal, out_signal, signal_type):
     plt.figure()
     plt.plot(in_signal, label="Input", color="blue", alpha=0.5)
     plt.plot(out_signal, label="Output", color="red", alpha=0.5)
-    plt.title("Input vs Output signals (Left)")
+    plt.title("Input vs Output signals")
     plt.xlabel("Samples")
     plt.ylabel("Amplitude")
     plt.grid(True)
