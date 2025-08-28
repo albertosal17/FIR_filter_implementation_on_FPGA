@@ -96,9 +96,9 @@ begin
   -- reset 
   process
   begin
-    rst <= '1';
-    wait for 5*CLK_PERIOD;
     rst <= '0';
+    wait for 5*CLK_PERIOD;
+    rst <= '1';
     wait;
   end process;
 
