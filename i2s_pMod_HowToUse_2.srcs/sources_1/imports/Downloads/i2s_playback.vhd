@@ -1,24 +1,3 @@
---------------------------------------------------------------------------------
---
---   FileName:         i2s_playback.vhd
---   Dependencies:     i2s_transceiver.vhd, clk_wiz_0 (PLL)
---   Design Software:  Vivado v2017.2
---
---   HDL CODE IS PROVIDED "AS IS."  DIGI-KEY EXPRESSLY DISCLAIMS ANY
---   WARRANTY OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
---   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
---   PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL DIGI-KEY
---   BE LIABLE FOR ANY INCIDENTAL, SPECIAL, INDIRECT OR CONSEQUENTIAL
---   DAMAGES, LOST PROFITS OR LOST DATA, HARM TO YOUR EQUIPMENT, COST OF
---   PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY OR SERVICES, ANY CLAIMS
---   BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF),
---   ANY CLAIMS FOR INDEMNITY OR CONTRIBUTION, OR OTHER SIMILAR COSTS.
---
---   Version History
---   Version 1.0 04/19/2019 Scott Larson
---     Initial Public Release
--- 
---------------------------------------------------------------------------------
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
@@ -27,8 +6,8 @@ USE ieee.std_logic_1164.all;
 
 ENTITY i2s_playback IS
     GENERIC(
-        d_width     :  INTEGER := 24
-        );                    --data width
+        d_width     :  INTEGER := 24 --data width
+        );                    
     PORT(
         clock       :  IN  STD_LOGIC;                     --system clock (100 MHz on Basys board)
         reset     :  IN  STD_LOGIC;                     --active low asynchronous reset
@@ -121,7 +100,8 @@ BEGIN
 
     ws(0) <= word_select;   --output word select (from I2S Transceiver) to ADC
     ws(1) <= word_select;   --output word select (from I2S Transceiver) to DAC
-
+    
+    -- playback: quello che entra esce
     r_data_tx <= r_data_rx;  --assign right channel received data to transmit (to playback out received data)
     l_data_tx <= l_data_rx;  --assign left channel received data to transmit (to playback out received data)
 

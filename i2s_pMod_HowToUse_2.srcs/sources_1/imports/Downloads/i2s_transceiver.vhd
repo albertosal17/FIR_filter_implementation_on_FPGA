@@ -1,4 +1,14 @@
 
+--                 FPGA
+--       +-------------------------+
+--       |        i2s_transceiver  |
+--       |                         |
+-- codec |  sd_rx ---> deserializer|--> l_data_rx (OUT)
+-- (ADC) |                         |--> r_data_rx (OUT)
+--       |                         |
+-- codec |  sd_tx <--- serializer  |<-- l_data_tx (IN)
+-- (DAC) |                         |<-- r_data_tx (IN)
+--       +-------------------------+
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
