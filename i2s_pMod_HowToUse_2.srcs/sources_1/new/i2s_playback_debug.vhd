@@ -1,3 +1,8 @@
+-- In questo file ho cercato di capire perchè il playback non andava. Ora è funzionante
+-- e si sente in cuffia quello che arriva attraverso il jack audio. E' anche presente un ila
+-- che permette di osservare i segnali di clock, i segnali input/ouput serializzati e anche 
+-- l'ouput finale.
+
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -79,11 +84,13 @@ ARCHITECTURE logic OF i2s_playback_debug IS
    probe0 : in std_logic; 
    probe1 : in std_logic; 
    probe2 : IN std_logic; 
-   probe3 : out std_logic);  --sd_tx
+   probe3 : out std_logic;
+   probe4 : OUT std_logic_vector);  --l_data_rx
  end component;
 
 --------------------------------------------------------------------------------------------
 
+    -- Needed for the led mclk to see if its alive
 
   signal div_cnt_mclk   : unsigned(23 downto 0) := (others=>'0'); -- 2^24
 
@@ -155,7 +162,8 @@ BEGIN
      probe0 => serial_clk,
      probe1 => word_select, 
      probe2 => sd_rx,
-     probe3 => sd_tx
+     probe3 => sd_tx,
+     probe4 => l_data_rx
     );
 
     -----------------------------------------------------------------------------------------

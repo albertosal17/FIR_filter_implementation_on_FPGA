@@ -1,3 +1,6 @@
+-- Questo file contiene il codice di base per implementare il transreceiver in funzione 
+-- playback: quello che entra, esce (a.k.a. senza filtraggio del segnale)
+
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
