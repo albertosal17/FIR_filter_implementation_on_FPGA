@@ -17,7 +17,7 @@ entity fir_filter_4_24bit is
   );
   port (
     clock       : in  std_logic; -- clock
-    reset       : in  std_logic; -- reset button
+    reset       : in  std_logic; -- active LOW reset
     i_data : in  std_logic_vector(DATA_W-1 downto 0); -- input data (signed)
     o_data: out std_logic_vector(DATA_W-1 downto 0)  --  output data (signed, after saturation)
   );
@@ -93,7 +93,7 @@ begin
   process(clock) -- word select clock in implementation
   begin
     if rising_edge(clock) then
-      if reset = '1' then -- in caso di reset
+      if reset = '0' then -- in caso di reset
         x0 <= (others=>'0'); x1 <= (others=>'0'); x2 <= (others=>'0'); x3 <= (others=>'0');
         acc <= (others=>'0');
       
