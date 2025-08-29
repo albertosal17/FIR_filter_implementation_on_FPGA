@@ -1,5 +1,6 @@
--- Here the major aim is to produce a csv file with input and output signal from real hardware, in playback mode.
-
+-- Here the major aim is to connect the filter between input and output of the transreceiver.
+-- Then, I want to produce a csv file with input and output signal 
+-- Ho anche implementato switch per introdurre segnale ad alta frequenza (rumore) prima del filtro
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
@@ -8,7 +9,7 @@ use ieee.numeric_std.all;
 --------------------------------------------------------------------------------------------
 
 
-ENTITY i2s_playback_sinusoidal IS
+ENTITY i2s_filter_sinusoidal IS
     GENERIC(
         d_width     :  INTEGER := 24 --data width
         );                    
@@ -23,13 +24,13 @@ ENTITY i2s_playback_sinusoidal IS
         reset_led   :  OUT STD_LOGIC;
         led_mclk_blink : OUT std_logic
         ); 
-END i2s_playback_sinusoidal;
+END i2s_filter_sinusoidal;
 
 
 --------------------------------------------------------------------------------------------
 
 
-ARCHITECTURE logic OF i2s_playback_sinusoidal IS
+ARCHITECTURE logic OF i2s_filter_sinusoidal IS
 
 --------------------------------------------------------------------------------------------
 
@@ -75,13 +76,36 @@ ARCHITECTURE logic OF i2s_playback_sinusoidal IS
     END COMPONENT;
 
 --------------------------------------------------------------------------------------------
+-- Declare the 24-bit filter
+    component fir_filter_4_24bit is
+      generic (
+        DATA_W  : integer := 24;
+        COEFF_W : integer := 12;
+        ACC_W   : integer := 41
+      );
+      port (
+        clock  : in  std_logic;  -- WS clock! 1 tick per campione
+        reset  : in  std_logic;  -- active LOW
+        i_data : in  std_logic_vector(DATA_W-1 downto 0);
+        o_data : out std_logic_vector(DATA_W-1 downto 0)
+      );
+    end component;
+    
+-- E dichiaro i segnali associati ai due filtri (L-R) che vado a implementare
+    signal l_data_filt : std_logic_vector(d_width-1 downto 0); -- output channel L
+    signal r_data_filt : std_logic_vector(d_width-1 downto 0); -- output channel R
+    signal ws_n        : std_logic;  -- WS invertito per avere il fronte corretto su L 
+    
+--------------------------------------------------------------------------------------------
 
- component ila_1
+ component ila_2
  port (
    clk    : in std_logic;       
-   probe0 : OUT std_logic_vector;  --l_data_rx
-   probe1 : OUT std_logic_vector;  --l_data_rx
-   probe2 : IN std_logic);  --sample_ok
+   probe0 : IN std_logic_vector; --r_data_tx
+   probe1 : IN std_logic_vector;  --l_data_tx
+   probe2 : OUT std_logic_vector;  --l_data_rx
+   probe3 : OUT std_logic_vector;  --l_data_rx
+   probe4 : IN std_logic);  --sample_ok
  end component;
 
 --------------------------------------------------------------------------------------------
@@ -92,11 +116,16 @@ ARCHITECTURE logic OF i2s_playback_sinusoidal IS
 --------------------------------------------------------------------------------------------
   -- Strobe signal for the ILA (to capture only on rising edge of ws)
   signal ws_d, sample_ok : std_logic := '0';
+
+--------------------------------------------------------------------------------------------
+  -- Switch per introdurre rumore
+  --sw_noise : in std_logic;  -- ON = inietta noise
+
 --------------------------------------------------------------------------------------------
 
 BEGIN
 
---------------------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------------------
 
     --instantiate PLL to create master clock
     i2s_clock: clk_wiz_0 
@@ -105,7 +134,7 @@ BEGIN
         clk_out1 => master_clk
         );
 
---------------------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------------------
 
     --instantiate I2S Transceiver component    
     reset <= not reset_btn;
@@ -128,9 +157,9 @@ BEGIN
             r_data_rx => r_data_rx
             );
 
---------------------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------------------
     
-    ---------- INIZIALIZZO I SEGNALI DI INPUT/OUTPUT ---------------
+    -- INIZIALIZZO I SEGNALI DI CLOCK
     mclk(0) <= master_clk;  --input master clock to ADC
     mclk(1) <= master_clk;  --input master clock to DAC
 
@@ -140,29 +169,61 @@ BEGIN
     ws(0) <= word_select;   --output word select (from I2S Transceiver) to ADC
     ws(1) <= word_select;   --output word select (from I2S Transceiver) to DAC
 
-    -- playback: quello che entra esce
-    r_data_tx <= r_data_rx;  --assign right channel received data to transmit (to playback out received data)
-    l_data_tx <= l_data_rx;  --assign left channel received data to transmit (to playback out received data)
+   --------------------------------------------------------------------------------------------
+    -- Instanzio i filtri e determino segnali output
+    ws_n <= not word_select;
     
+    -- Filtro LEFT: clock sul fronte di discesa di WS (rising di ws_n)
+    fir_L: fir_filter_4_24bit
+      generic map (
+        DATA_W  => d_width,
+        COEFF_W => 12,
+        ACC_W   => 41
+      )
+      port map (
+        clock  => ws_n,         -- rising_edge(ws_n) coincide con falling_edge(WS)
+        reset  => reset,        -- active LOW (gi� gestito a monte)
+        i_data => l_data_rx,
+        o_data => l_data_filt
+      );
+    
+    -- Filtro RIGHT: clock sul fronte di salita di WS
+    fir_R: fir_filter_4_24bit
+      generic map (
+        DATA_W  => d_width,
+        COEFF_W => 12,
+        ACC_W   => 41
+      )
+      port map (
+        clock  => word_select,  -- rising_edge(WS)
+        reset  => reset,
+        i_data => r_data_rx,
+        o_data => r_data_filt
+      );
 
---------------------------------------------------------------------------------------------
+    -- Invio ai TX i dati filtrati
+    l_data_tx <= l_data_filt;
+    r_data_tx <= r_data_filt;
+
+    --------------------------------------------------------------------------------------------
 
     --TO see reset in a led
     reset_led <= reset;
 
---------------------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------------------
 
-    -- Ila instantiation
-    
-    ila_inst: ila_1
+    -- Ila instantiation   
+    ila_inst: ila_2
     port map (
      clk    => master_clk,        
-     probe0 => l_data_tx,
-     probe1 => r_data_tx,
-     probe2 => sample_ok
+     probe0 => l_data_rx,
+     probe1 => l_data_tx,
+     probe2 => r_data_rx,
+     probe3 => r_data_tx,
+     probe4 => sample_ok
     );
 
------------------------------------------------------------------------------------------
+    -----------------------------------------------------------------------------------------
     -- Check if master clock is alive by blinking a led
     process(master_clk)
     begin
@@ -173,7 +234,7 @@ BEGIN
 
     led_mclk_blink <= std_logic(div_cnt_mclk(23));  -- lampeggia piano se master_clk funziona
 
----------------------------------------------------------------------------------------------
+    ---------------------------------------------------------------------------------------------
 
     process(master_clk)
     begin

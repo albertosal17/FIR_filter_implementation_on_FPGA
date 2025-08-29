@@ -7,7 +7,7 @@ from utils import load_csv, db
 from plot import plot_time, plot_freqz, input_vs_output_time
 
 # CONFIGURATION
-CSV_PATH = "../log_simulations/fir_sinusoidal_sim_logs.csv"   # log file from simulation 
+CSV_PATH = "../../log_simulations/fir_sinusoidal_sim_logs.csv"   # log file from simulation 
 signal_type = "sinusoidal"  # for plotting and saving files
 
 WS_frequency = 48820.0                 # sample rate in Hz (sclk_freq/64 with sclk_freq=mclk_freq/4 and mclk_period=80ns)
@@ -63,7 +63,7 @@ def analyze_logged(data, fs):
     plt.ylabel("Magnitude [dB]")
     plt.grid(True, which='both')
     plt.legend()
-    plt.savefig("../plots_"+ signal_type + "_sim/"+"input_output_spectrum.svg", format='svg')
+    plt.savefig("../../plots_sim/plots_"+ signal_type + "_sim/"+"input_output_spectrum.svg", format='svg')
     plt.show()
 
 

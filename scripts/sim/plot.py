@@ -17,7 +17,7 @@ def plot_time(sig, title, signal_type=None, ylabel="Amplitude", filename=None):
     plt.ylabel(ylabel)
     plt.grid(True)
 
-    plt.savefig("../plots_"+ signal_type +"_sim/"+filename) if (filename and signal_type) else None
+    plt.savefig("../../plots_sim/plots_"+ signal_type +"_sim/"+filename) if (filename and signal_type) else None
     plt.show()
 
 
@@ -42,7 +42,7 @@ def plot_freqz(coeff, fs, signal_type, filename=None):
     plt.ylabel("Magnitude [dB]")
     plt.grid(True)
 
-    plt.savefig("../plots_"+signal_type+"_sim/"+filename) if filename else None
+    plt.savefig("../../plots_sim/plots_"+signal_type+"_sim/"+filename) if filename else None
     plt.show()
 
 def input_vs_output_time(in_signal, out_signal, signal_type):
@@ -60,27 +60,6 @@ def input_vs_output_time(in_signal, out_signal, signal_type):
     plt.ylabel("Amplitude")
     plt.grid(True)
     plt.legend()
-    plt.savefig("../plots_"+signal_type+"_sim/input_output_time.svg", format='svg')
+    plt.savefig("../../plots_sim/plots_"+signal_type+"_sim/input_output_time.svg", format='svg')
     plt.show()
 
-
-
-def plot_time_hw(sig, title, signal_type=None, ylabel="Amplitude", filename=None):
-    """
-    Plot the signal in time domain (time on x axis, amplitude on y axis).
-    For the signals csv comming from real hw
-
-    signal_type: either "squarewave" or "sinusoidal".
-    """
-    plt.figure()
-
-    plt.plot(sig)
-    #plt.scatter(np.arange(sig.shape[0]), sig, s=1)
-
-    plt.title(title)
-    plt.xlabel("Samples")
-    plt.ylabel(ylabel)
-    plt.grid(True)
-
-    plt.savefig("../plots_"+ signal_type +"_sim/"+filename) if (filename and signal_type) else None
-    plt.show()
