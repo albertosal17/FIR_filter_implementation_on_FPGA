@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils_hw import db
 
-def plot_time(sig, title, test_type=None, ylabel="Amplitude", filename=None):
+def plot_time(sig, title, test_type=None, ylabel="Amplitude", filename=None, color='blue'):
     """
     Plot the signal in time domain (time on x axis, amplitude on y axis).
 
@@ -10,7 +10,7 @@ def plot_time(sig, title, test_type=None, ylabel="Amplitude", filename=None):
     """
     plt.figure()
 
-    plt.plot(sig, color='blue')
+    plt.plot(sig, color=color)
 
     plt.title(title)
     plt.xlabel("Samples")
@@ -45,17 +45,18 @@ def plot_time(sig, title, test_type=None, ylabel="Amplitude", filename=None):
 #     plt.savefig("../../plots_sim/plots_"+signal_type+"_sim/"+filename) if filename else None
 #     plt.show()
 
-def input_vs_output_time(in_signal, out_signal, test_type, channel):
+def input_vs_output_time(in_signal, out_signal, test_type, channel, title=None):
     """
     Plot the input and output signals in time domain.
     in_signal: Input signal (numpy array).
     out_signal: Output signal (numpy array).
     test_type: either "filter" or "playback".
     """
+    if title is None: title = f"{test_type} - Input vs Output signals (Channel "+channel +")"
     plt.figure()
     plt.plot(in_signal, label="Input", color="blue", alpha=0.5)
     plt.plot(out_signal, label="Output", color="red", alpha=0.5)
-    plt.title("Input vs Output signals (Channel "+channel +")")
+    plt.title(title)
     plt.xlabel("Samples")
     plt.ylabel("Amplitude")
     plt.grid(True)

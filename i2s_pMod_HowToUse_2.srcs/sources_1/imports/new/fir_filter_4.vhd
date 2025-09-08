@@ -4,12 +4,12 @@ use ieee.numeric_std.all;
 
 ------------------------------- COMMENTI GENERALI------------------------------------------------------------------
 -- Fir filter che viene applicato sugli ultimi 4 campionamenti del segnale
--- Ogni campionamento del segnale è rappresentato da un valore a 8 bit (numero fra -127 e 128)
+-- Ogni campionamento del segnale Ã¨ rappresentato da un valore a 8 bit (numero fra -127 e 128)
 -- Anche i pesi che moltiplicano il segnale sono numeri a 8 bit
 
--- In generale, moltiplicando due numeri a 8 bit al più ottieni un numero a 15 bit
--- Siccome poi sommerai quattro di questi numeri da 15 bit, al più avrai un numero a 17 bit: l'output del filtro
--- Qui si è deciso di troncare l'output tenendo solo i primi 10 bit
+-- In generale, moltiplicando due numeri a 8 bit al piÃ¹ ottieni un numero a 15 bit
+-- Siccome poi sommerai quattro di questi numeri da 15 bit, al piÃ¹ avrai un numero a 17 bit: l'output del filtro
+-- Qui si Ã¨ deciso di troncare l'output tenendo solo i primi 10 bit
 --------------------------------------------------------------------------------------------------------------------
 
 --Qui dichiari come si chiamano e che tipo sono gli input e gli output del filtro
@@ -141,9 +141,8 @@ begin
     -- end (left) toward the least significant end (right).
     -- CIOE VENGONO TRONCATE LE CIFRE MENO SIGNIFICATIVE, EFFETTUANDO UNO SHIFT CHE CAUSA UN RESCALING
     --GPT:
-    --This is a scaling operation — you're removing the least 
-    -- significant 8 bits of precision (often used in fixed-point
-    -- arithmetic) and just keeping the high part, to fit into a
+    --This is a scaling operation where you're removing the least 
+    -- significant 8 bits of precision  and just keeping the high part, to fit into a
     -- smaller output width (10 bits in this case).
   end if;
   

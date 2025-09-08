@@ -85,11 +85,12 @@ ARCHITECTURE logic OF i2s_filter_final IS
 
 --------------------------------------------------------------------------------------------
 -- Declare the 24-bit filter
-    component fir_filter_4_24bit is
+    component fir_MA is
       generic (
         DATA_W  : integer := 24;
         COEFF_W : integer := 12;
-        ACC_W   : integer := 41
+        ACC_W   : integer := 44;
+        N_TAPS    : integer := 4                     -- order of the filter = N_TAPS - 1
       );
       port (
         clock  : in  std_logic;  -- WS clock! 1 tick per campione
@@ -146,8 +147,10 @@ signal div_cnt_ws   : unsigned(DIV_BIT downto 0) := (others=>'0'); -- 2^24
 --------------------------------------------------------------------------------------------
   -- filter bypass
   signal l_to_tx, r_to_tx : std_logic_vector(d_width-1 downto 0);
-
 --------------------------------------------------------------------------------------------
+
+constant N_TAPS : integer := 20;
+
 
 BEGIN
 
@@ -200,11 +203,12 @@ BEGIN
     ws_n <= not word_select;
     
     -- Filtro LEFT: clock sul fronte di discesa di WS (rising di ws_n)
-    fir_L: fir_filter_4_24bit
+    fir_L: fir_MA
       generic map (
         DATA_W  => d_width,
         COEFF_W => 12,
-        ACC_W   => 41
+        ACC_W   => 44,
+        N_TAPS => N_TAPS 
       )
       port map (
         clock  => ws_n,         -- rising_edge(ws_n) coincide con falling_edge(WS)
@@ -214,11 +218,12 @@ BEGIN
       );
     
     -- Filtro RIGHT: clock sul fronte di salita di WS
-    fir_R: fir_filter_4_24bit
+    fir_R: fir_MA
       generic map (
         DATA_W  => d_width,
         COEFF_W => 12,
-        ACC_W   => 41
+        ACC_W   => 44,
+        N_TAPS => N_TAPS 
       )
       port map (
         clock  => word_select,  -- rising_edge(WS)

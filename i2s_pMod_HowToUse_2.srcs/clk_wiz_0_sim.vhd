@@ -39,8 +39,8 @@ entity clk_wiz_0 is
 end clk_wiz_0;
 
 architecture Behavioral of clk_wiz_0 is
-    -- Divide 100 MHz by 8 → 12.5 MHz (close enough to 11.2896 for functional sim)ù
-    signal div : integer range 0 to 3 := 0;  -- Divided clock signal
+    -- Divide 100 MHz by 8 → 12.5 MHz (close to 11.2896, ok for sim purposes)ù
+    signal div : integer range 0 to 3 := 0;  -- Counter clock signal
     signal r       : STD_LOGIC := '0';  -- Output clock signal
 begin
     process(clk_in1)
@@ -50,7 +50,7 @@ begin
                 div <= 0;
                 r <= NOT r;  -- Toggle the output clock every 4 input clock cycles
             else
-                div <= div + 1;  -- Increment the divider
+                div <= div + 1;  -- Increment the counter
             end if;
         end if;
     end process;

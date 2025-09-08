@@ -1,4 +1,7 @@
 
+-- This code implements a combined i2s transmitter and receiver with parameterized data width 
+-- and clock ratios. 
+
 --                 FPGA
 --       +-------------------------+
 --       |        i2s_transceiver  |
@@ -13,8 +16,6 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
 
--- This code implements a combined i2s transmitter and receiver with parameterized data width 
--- and clock ratios. 
 
 ENTITY i2s_transceiver IS
   GENERIC(
@@ -30,7 +31,7 @@ ENTITY i2s_transceiver IS
     sd_rx      :  IN   STD_LOGIC;                             --serial data receive
     l_data_tx  :  IN   STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --left channel data to transmit
     r_data_tx  :  IN   STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --right channel data to transmit
-    l_data_rx  :  OUT  STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --left channel data received (internally, after the i2s procedure)
+    l_data_rx  :  OUT  STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --left channel data received 
     r_data_rx  :  OUT  STD_LOGIC_VECTOR(d_width-1 DOWNTO 0)); --right channel data received (internally, after the i2s procedure)
 END i2s_transceiver;
 

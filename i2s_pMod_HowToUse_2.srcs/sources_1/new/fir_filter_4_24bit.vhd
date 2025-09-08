@@ -1,7 +1,7 @@
 -- THIS FILE CONTAINS THE IMPLEMENTATION OF THE FIR FILTER BASED ON fir_filter_4.vhd WITH
--- THE EXTENSION OG DATA WITDTH TO 24 BIT FOR IMPLEMENTATION PURPOSES (THE PMOD READS 24 BIT DATA)
+-- THE EXTENSION OF DATA WITDTH TO 24 BIT FOR IMPLEMENTATION PURPOSES (THE PMOD READS 24 BIT DATA)
 -- OTHER MINOR MODIFICATIONS TO THE ARCHITECTURE HAVE BEEN MADE, IN PARTICULAR: 
--- NO DYNAMIC COEFFICIENTS BUT A FIXEDLOW-PASS FILTER
+-- NO DYNAMIC COEFFICIENTS BUT A FIXED LOW-PASS FILTER
 -- NORMAZILED GUADAGNO: OUTPUT SIGNAL HAS SAME MAGNITUDE OF THE INPUT ONE
 -- SATURATION STRATEGY FOR SIGNALS WHO UNDER/OVER-FIT
 
@@ -13,7 +13,7 @@ entity fir_filter_4_24bit is
   generic (
     DATA_W   : integer := 24;                  -- ampiezza (in bit) dei dati in ingresso e uscita
     COEFF_W  : integer := 12;                  -- ampiezza (in bit) dei coefficienti
-    ACC_W    : integer := 41                   -- ampiezza accumulatore (24+12+2 (somma 4 tap) + 3 guard bits)
+    ACC_W    : integer := 41                   -- ampiezza accumulatore (24+12+2 (somma 4 tap) + 2 guard bits)
   );
   port (
     clock       : in  std_logic; -- clock
@@ -24,24 +24,31 @@ entity fir_filter_4_24bit is
 end entity;
 
 architecture rtl of fir_filter_4_24bit is
-  -- Coefficienti interi [1,2,2,1] per filtro passa-basso
-  -- In questo caso li tengo costanti, e non dinamici come in fir_filter_4.vhd
+
   ------------
-  -- USA QUESTI NEL CASO DI GUADAGNO NON UNITARIO (guadagno=6: 1+2+2+1)
-  --constant C0 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
-  --constant C1 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
-  --constant C2 : signed(COEFF_W-1 downto 0) := to_signed(2, COEFF_W);
-  --constant C3 : signed(COEFF_W-1 downto 0) := to_signed(1, COEFF_W);
-  ------------
-  -- USA QUESTI NEL CASO DI GUADAGNO UNITARIO (guadagno=1: 1/6)
+  -- In questa implementazione tengo i coefficienti costanti, e non dinamici come in fir_filter_4.vhd
   -- rappresentazione Q0.12 per i numeri decimali, con 12 bit di parte frazionaria
-  -- Nota: poi, dopo l’accumulo, bisogna fare uno shift right di 12 bit (cioè dividere per 2^12) per riportare i risultati alla scala corretta.
+  -- Nota: poi, dopo l'accumulo, bisogna fare uno shift right di 12 bit (cioè dividere per 2^12) per riportare i risultati alla scala corretta.
   constant FRAC : integer := 12;
-  constant C0 : signed(COEFF_W-1 downto 0) := to_signed( 683, COEFF_W);  -- 1/6 (1/6=0.16 -> 0.16* 2^12 = 0.16 * 4096 ≈ 683)
-  constant C1 : signed(COEFF_W-1 downto 0) :=  to_signed(1365, COEFF_W);  -- 2/6
-  constant C2 : signed(COEFF_W-1 downto 0) := C1;
+  ----------------------------------------------------------------------------------------------------------------------------------------
+  -- FILTRO [1,2,2,1]/6
+  --constant C0 : signed(COEFF_W-1 downto 0) := to_signed( 683, COEFF_W);  -- 1/6 (1/6=0.16 -> 0.16* 2^12 = 0.16 * 4096 = 683)
+  --constant C1 : signed(COEFF_W-1 downto 0) :=  to_signed(1365, COEFF_W);  -- 2/6
+  --constant C2 : signed(COEFF_W-1 downto 0) := C1;
+  --constant C3 : signed(COEFF_W-1 downto 0) := C0;
+----------------------------------------------------------------------------------------------------------------------------------------
+  -- FILTRO [1,1,1,1]/4 ("moving average")
+  constant C0 : signed(COEFF_W-1 downto 0) := to_signed( 1024, COEFF_W);  -- 1/4 (1/4=0.25 -> 0.25* 2^12 = 0.25 * 4096 = 1024)
+  constant C1 : signed(COEFF_W-1 downto 0) := C0; 
+  constant C2 : signed(COEFF_W-1 downto 0) := C0;
   constant C3 : signed(COEFF_W-1 downto 0) := C0;
-  ------------
+----------------------------------------------------------------------------------------------------------------------------------------
+  -- FILTRO [-10,110,127,-20]/207  da tb trovato online
+  --constant C0 : signed(COEFF_W-1 downto 0) := to_signed( -198, COEFF_W); 
+  --constant C1 : signed(COEFF_W-1 downto 0) := to_signed( 2177, COEFF_W);
+  --constant C2 : signed(COEFF_W-1 downto 0) := to_signed( 2513, COEFF_W);
+  --constant C3 : signed(COEFF_W-1 downto 0) := to_signed( -396, COEFF_W);
+----------------------------------------------------------------------------------------------------------------------------------------
 
 
   signal x0, x1, x2, x3 : signed(DATA_W-1 downto 0); -- shift register per i 4 campioni del segnale in ingresso
@@ -90,7 +97,7 @@ architecture rtl of fir_filter_4_24bit is
 begin
   xin <= signed(i_data);
 
-  process(clock) -- word select clock in implementation
+  process(clock) -- 'clock' is word select clock in implementation
   begin
     if rising_edge(clock) then
       if reset = '0' then -- in caso di reset
@@ -105,7 +112,7 @@ begin
         x0 <= xin;
 
         -- prodotti
-        -- resize dei fattori così vivado capisce che il risultato sarà di ampiezza (DATA_W + COEFF_W) bit
+        -- resize dei fattori cossì vivado capisce che il risultato sarà di ampiezza (DATA_W + COEFF_W) bit
         p0 <= resize( signed(x0) * signed(C0), (DATA_W + COEFF_W) );
         p1 <= resize( signed(x1) * signed(C1), (DATA_W + COEFF_W) );
         p2 <= resize( signed(x2) * signed(C2), (DATA_W + COEFF_W) );
@@ -116,13 +123,12 @@ begin
         acc <= resize(p0, ACC_W) + resize(p1, ACC_W) + resize(p2, ACC_W) + resize(p3, ACC_W);
 
         acc_scaled <= shift_right(acc, FRAC); -- rimuove i bit frazionari
-        -- ATTENZIONE: usa solo nel caso in cui usi guadagno unitario (guadagno=1: 1/6), altrimenti non serve
 
       end if;
     end if;
   end process;
 
-  -- saturiamo e convertiamo l'uscita in signed 16 bit
+  -- saturo e converto l'uscita in signed 16 bit
   o_data <= std_logic_vector(saturation_signed(acc_scaled));
 
 end architecture;

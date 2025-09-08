@@ -1,6 +1,5 @@
 -- Here the major aim is to connect the filter between input and output of the transreceiver.
 -- Then, I want to produce a csv file with input and output signal 
--- Ho anche implementato switch per introdurre segnale ad alta frequenza (rumore) prima del filtro
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
